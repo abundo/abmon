@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"net"
 	"strings"
@@ -25,6 +24,7 @@ func writeToAllTelnetClients(message string) {
 }
 
 func HandleTelnetClient(conn net.Conn) {
+	conn = newCRLFConn(conn)
 	defer func() {
 		TelnetClientsMutex.Lock()
 		delete(TelnetClients, conn)
@@ -36,13 +36,20 @@ func HandleTelnetClient(conn net.Conn) {
 	TelnetClients[conn] = client
 	TelnetClientsMutex.Unlock()
 
-	reader := bufio.NewReader(conn)
+	negotiateTelnet(conn)
+	le := newLineEditor(conn)
 	conn.Write([]byte("-------------------------------------------------------------------\n"))
 	conn.Write([]byte("! Welcome to check_dns_propagation. Type help for some light help !\n"))
+	conn.Write([]byte("! Tab/? completes commands, Up/Down history, Ctrl-D quits         !\n"))
 	conn.Write([]byte("-------------------------------------------------------------------\n"))
 	for {
-		message, err := reader.ReadString('\n')
+		message, err := le.ReadLine()
 		message = strings.TrimSpace(message)
+		if err == errQuit {
+			log.Info("Telnet - client used Ctrl-D to quit")
+			fmt.Fprintln(conn, "Disconnecting, bye!")
+			return
+		}
 		if err != nil {
 			log.Info("Telnet - client disconnected")
 			return
@@ -52,11 +59,16 @@ func HandleTelnetClient(conn net.Conn) {
 			fmt.Fprintln(conn, "Disconnecting, bye!")
 			return
 		}
+		done := make(chan struct{})
 		chanEvent <- Event{Name: message,
 			Type:   MessageCLI,
 			Client: client,
 			Conn:   conn,
+			Done:   done,
 		}
+		// Wait for CLI() to finish writing its output before looping back
+		// to ReadLine, so the next prompt isn't printed ahead of it.
+		<-done
 	}
 }
 

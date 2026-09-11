@@ -9,7 +9,6 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -73,6 +72,7 @@ type Event struct {
 	Error  string // if non-empty, error message
 	Client *telnetClient
 	Conn   net.Conn
+	Done   chan struct{} // for MessageCLI, closed once CLI() has finished writing its output
 }
 
 // todo, handle huge amount of events better, limit number of workers?
@@ -367,6 +367,7 @@ func CLI(conn net.Conn, client *telnetClient, cmd string) {
 		fmt.Fprintln(conn, "  show zone <name>")
 		fmt.Fprintln(conn, "  show zones")
 		fmt.Fprintln(conn, "  quit")
+		fmt.Fprintln(conn, "Tab or ? completes commands, Up/Down arrows recall history, Ctrl-D quits")
 	case "quit":
 		fmt.Fprintln(conn, "ERROR: Not implemented yet")
 	case "show":
@@ -481,6 +482,9 @@ func eventLoop() {
 			}
 		case MessageCLI:
 			CLI(event.Conn, event.Client, event.Name)
+			if event.Done != nil {
+				close(event.Done)
+			}
 		default:
 			log.Errorf("Unknown event action: %d", event.Type)
 		}
@@ -509,34 +513,7 @@ func (hook *logToTelnet) Fire(entry *logrus.Entry) error {
 	return nil
 }
 
-// Use telnet server as console CLI
-func connectToTelnetServer() {
-	conn, err := net.Dial("tcp", "localhost:10023")
-
-	if err != nil {
-		fmt.Println("Error connecting to local telnet server:", err)
-		return
-	}
-	defer conn.Close()
-
-	go func() {
-		scanner := bufio.NewScanner(os.Stdin)
-		for scanner.Scan() {
-			message := scanner.Text()
-			conn.Write([]byte(message + "\n"))
-		}
-	}()
-
-	reader := bufio.NewReader(conn)
-	for {
-		response, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("Disconnected from server.")
-			return
-		}
-		fmt.Print(response)
-	}
-}
+// connectToTelnetServer is defined in telnet_devclient.go
 
 func main() {
 	var err error
@@ -557,7 +534,12 @@ func main() {
 	// Only enable local CLI if there is an TTY
 	if isatty.IsTerminal(os.Stdout.Fd()) {
 		log.SetOutput(io.Discard) // avoid duplicate log outputs
-		go connectToTelnetServer()
+		go func() {
+			connectToTelnetServer()
+			// The local dev console disconnected (e.g. Ctrl-D); exit the
+			// whole process rather than leaving it running headless.
+			os.Exit(0)
+		}()
 	}
 
 	// Start the eventloop

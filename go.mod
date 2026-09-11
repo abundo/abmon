@@ -15,6 +15,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20
 	github.com/miekg/dns v1.1.61
 	github.com/sirupsen/logrus v1.9.4
+	golang.org/x/sys v0.47.0
 	gopkg.in/yaml.v2 v2.4.0
 	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
 )
@@ -28,7 +29,6 @@ require (
 	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/tools v0.47.0 // indirect
 )
