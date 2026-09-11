@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout abmon
+        uses: actions/checkout@v4
+        with:
+          path: abmon
+
+      # go.mod replaces github.com/abundo/dnsnode with a sibling checkout
+      # (../dnsnode relative to this repo) - see DEV.md.
+      - name: Checkout dnsnode
+        uses: actions/checkout@v4
+        with:
+          repository: abundo/dnsnode
+          path: dnsnode
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: abmon/go.mod
+          cache-dependency-path: abmon/go.sum
+
+      - name: Check formatting
+        working-directory: abmon
+        run: |
+          fmt_out="$(gofmt -l .)"
+          if [ -n "$fmt_out" ]; then
+            echo "The following files are not gofmt'd:"
+            echo "$fmt_out"
+            exit 1
+          fi
+
+      - name: Vet
+        working-directory: abmon
+        run: go vet ./...
+
+      - name: Build
+        working-directory: abmon
+        run: go build ./...
+
+      - name: Test
+        working-directory: abmon
+        run: go test -race ./...

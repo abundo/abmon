@@ -1,0 +1,133 @@
+version: 2
+
+project_name: abmon
+
+# github.com/abundo/dnsnode is resolved via a local filesystem `replace` in
+# go.mod (see DEV.md) - CI checks it out as a sibling directory (../dnsnode)
+# before invoking goreleaser, so no module-fetching hooks are needed here.
+
+builds:
+  - id: check_becs_dhcp_scope
+    main: ./cmd/check_becs_dhcp_scope
+    binary: check_becs_dhcp_scope
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s, -w]
+
+  - id: check_dns_propagation
+    main: ./cmd/check_dns_propagation
+    binary: check_dns_propagation
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s, -w]
+
+  - id: check_file_status
+    main: ./cmd/check_file_status
+    binary: check_file_status
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s, -w]
+
+  - id: check_http_redirect
+    main: ./cmd/check_http_redirect
+    binary: check_http_redirect
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s, -w]
+
+  - id: check_imap_message_age
+    main: ./cmd/check_imap_message_age
+    binary: check_imap_message_age
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s, -w]
+
+  - id: check_ldap_auth
+    main: ./cmd/check_ldap_auth
+    binary: check_ldap_auth
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s, -w]
+
+  - id: check_ntp_peers
+    main: ./cmd/check_ntp_peers
+    binary: check_ntp_peers
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s, -w]
+
+  - id: check_radius_auth
+    main: ./cmd/check_radius_auth
+    binary: check_radius_auth
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s, -w]
+
+  - id: check_rrsig_expiry
+    main: ./cmd/check_rrsig_expiry
+    binary: check_rrsig_expiry
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s, -w]
+
+  - id: check_zonemaster
+    main: ./cmd/check_zonemaster
+    binary: check_zonemaster
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s, -w]
+
+  - id: create_icinga_zones_conf
+    main: ./cmd/create_icinga_zones_conf
+    binary: create_icinga_zones_conf
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: [-s, -w]
+
+# One archive per os/arch, bundling all check binaries together (mirrors
+# `make install`, which installs them all as a set).
+archives:
+  - id: default
+    formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - README.md
+      - DEV.md
+      - examples/*
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^test:"
+      - "^ci:"
+      - "^docs:"
+
+release:
+  prerelease: auto

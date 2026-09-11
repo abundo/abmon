@@ -1,0 +1,18 @@
+---
+# Example condfiguration file for abmon
+
+zones:
+  abundo.se:
+    primary: ns1.abundo.se
+  lowinger.se:
+    primary: ns1.abundo.se
+
+# Used by check_becs_dhcp_scope
+becs:
+  url: https://becs.example.com/eapi
+  username: monitor
+  password: secret
+
+dhcp_scopes:
+  office-lan:
+    oid: "12345"

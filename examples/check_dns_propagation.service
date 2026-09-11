@@ -1,0 +1,17 @@
+# Service script for check_dns_propagation
+#
+# copy to /etc/systemd/system
+#     systemctl daemon-reload
+#     systemctl enable check_dns_propagation
+#     systemctl start check_dns_propagation
+#
+
+[Unit]
+Description=Check DNS propagation
+After=
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=60
+ExecStart=/usr/bin/check_dns_propagation

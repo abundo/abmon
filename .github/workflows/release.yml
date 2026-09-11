@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout abmon
+        uses: actions/checkout@v4
+        with:
+          path: abmon
+          fetch-depth: 0
+
+      # go.mod replaces github.com/abundo/dnsnode with a sibling checkout
+      # (../dnsnode relative to this repo) - see DEV.md.
+      - name: Checkout dnsnode
+        uses: actions/checkout@v4
+        with:
+          repository: abundo/dnsnode
+          path: dnsnode
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: abmon/go.mod
+          cache-dependency-path: abmon/go.sum
+
+      - name: Test
+        working-directory: abmon
+        run: go test -race ./...
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> 2"
+          args: release --clean
+          workdir: abmon
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
