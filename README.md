@@ -1,6 +1,6 @@
-# monitoring_plugins_go
+# abmon
 
-[![CI](https://github.com/abundo/monitoring_plugins_go/actions/workflows/ci.yml/badge.svg)](https://github.com/abundo/monitoring_plugins_go/actions/workflows/ci.yml)
+[![CI](https://github.com/abundo/abmon/actions/workflows/ci.yml/badge.svg)](https://github.com/abundo/abmon/actions/workflows/ci.yml)
 
 Collection of useful monitoring plugins, for nagios, naemon, icinga, dns and more - written in go
 
@@ -266,4 +266,4 @@ Note: `check_radius_auth` and `check_ntp_peers` do not yet have Makefile build/i
 
     go build -o build/check_radius_auth ./cmd/check_radius_auth
 
-Alternatively, download a prebuilt release from the [Releases page](https://github.com/abundo/monitoring_plugins_go/releases) - each release has a `.tar.gz` per OS/architecture containing all the check binaries. Releases are built by [goreleaser](https://goreleaser.com) (config: `.goreleaser.yaml`); see `DEV.md` for how to cut one.
+Alternatively, download a prebuilt release from the [Releases page](https://github.com/abundo/abmon/releases) - each release has a `.tar.gz` per OS/architecture containing all the check binaries. Releases are built by [goreleaser](https://goreleaser.com) (config: `.goreleaser.yaml`); see `DEV.md` for how to cut one.
