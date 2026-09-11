@@ -6,6 +6,20 @@ Collection of useful monitoring plugins, for nagios, naemon, icinga, dns and mor
 
 # Available checks
 
+| Check                      | Description                                                                 |
+| --------------------------- | ---------------------------------------------------------------------------- |
+| [check_dns_propagation](#check_dns_propagation) | Passive daemon that listens for DNS NOTIFY and measures SOA serial propagation time |
+| [check_file_status](#check_file_status)     | Checks a file's age and first-line status content                            |
+| [check_http_redirect](#check_http_redirect)   | Checks that a web site redirects to the expected target                      |
+| [check_imap_message_age](#check_imap_message_age) | Checks the age of the oldest message in an IMAP mailbox                      |
+| [check_ldap_auth](#check_ldap_auth)        | Checks that authentication against an LDAP server works                      |
+| [check_ntp_peers](#check_ntp_peers)        | Checks that NTP is syncing time towards at least one peer                    |
+| [check_radius_auth](#check_radius_auth)      | Checks that authentication against a RADIUS server works                     |
+| [check_rrsig_expiry](#check_rrsig_expiry)     | Checks RRSIG age/expiry in a DNS zone (via AXFR or zone file)                 |
+| [check_zonemaster](#check_zonemaster)       | Checks zone(s) for errors using the zonemaster tool                          |
+| [check_becs_dhcp_scope](#check_becs_dhcp_scope) | Checks free address count in BECS DHCP scopes (not yet functional)           |
+| [create_icinga_zones_conf](#create_icinga_zones_conf) | Not a check - generates Icinga2 config from zones in `abmon.yaml`            |
+
 Command line arguments, valid for all checks:
 
 | Argument       | Type    | Default              | Required | Description                 |
