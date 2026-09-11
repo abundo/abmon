@@ -18,7 +18,7 @@ func TestIcingaZoneTemplateRendersFields(t *testing.T) {
 		Customer:            "acme",
 		DnsNode:             true,
 		DnsCheckPropagation: true,
-		DnsCheckZonemaster:  false,
+		DnsCheckGonemaster:  false,
 	}
 
 	tmpl, err := template.New("template").Parse(icingaZoneTemplate)
@@ -37,7 +37,7 @@ func TestIcingaZoneTemplateRendersFields(t *testing.T) {
 		`vars.dns_customer = "acme"`,
 		`vars.dns_dnsnode = true`,
 		`vars.dns_check_propagation = true`,
-		`vars.dns_check_zonemaster = false`,
+		`vars.dns_check_gonemaster = false`,
 	}
 	for _, want := range wantSubstrings {
 		if !strings.Contains(out, want) {
@@ -53,7 +53,7 @@ func TestIcingaZoneHeaderParses(t *testing.T) {
 		`template Host "dns-host-unmanaged"`,
 		`template Service "dns-service"`,
 		`ServiceGroup "DNS-propagation"`,
-		`ServiceGroup "DNS-zonemaster"`,
+		`ServiceGroup "DNS-gonemaster"`,
 	} {
 		if !strings.Contains(icingaZoneHeader, want) {
 			t.Errorf("icingaZoneHeader missing %q", want)

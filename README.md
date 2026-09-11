@@ -16,8 +16,8 @@ Collection of useful monitoring plugins, for nagios, naemon, icinga, dns and mor
 | [check_ntp_peers](#check_ntp_peers)        | Checks that NTP is syncing time towards at least one peer                    |
 | [check_radius_auth](#check_radius_auth)      | Checks that authentication against a RADIUS server works                     |
 | [check_rrsig_expiry](#check_rrsig_expiry)     | Checks RRSIG age/expiry in a DNS zone (via AXFR or zone file)                 |
-| [check_zonemaster](#check_zonemaster)       | Checks zone(s) for errors using the zonemaster tool                          |
-| [check_becs_dhcp_scope](#check_becs_dhcp_scope) | Checks free address count in BECS DHCP scopes (not yet functional)           |
+| [check_gonemaster](#check_gonemaster)       | Checks zone(s) for errors using the gonemaster tool                          |
+| [check_becs_dhcp_scope](#check_becs_dhcp_scope) | Checks free address count in BECS DHCP scopes                                |
 | [create_icinga_zones_conf](#create_icinga_zones_conf) | Not a check - generates Icinga2 config from zones in `abmon.yaml`            |
 
 Command line arguments, valid for all checks:
@@ -203,24 +203,24 @@ Example:
     check_rrsig_expiry --host ns1.example.com --zone example.com
 
 
-## check_zonemaster
+## check_gonemaster
 
-Check zone(s) for errors, using the tool [zonemaster](https://github.com/zonemaster/zonemaster). Zonemaster is run via `docker run zonemaster/cli` (requires `/usr/bin/docker` and network access to pull `zonemaster/cli`), so this is implemented as a passive check that sends its result to Icinga/Nagios itself instead of relying on the process exit code.
+Check zone(s) for errors, using the tool [gonemaster](https://codeberg.org/pawal/gonemaster), a modern replacement for the old perl-based zonemaster. gonemaster is a self-contained Go binary (no docker/perl dependencies required), so this is implemented as a passive check that sends its result to Icinga/Nagios itself instead of relying on the process exit code.
 
-Only zones in `abmon.yaml` with `dns_check_zonemaster: true` are checked; tests can be excluded per zone with the zone's `exclude` list (either a full `module/test` name or just a module name to exclude all its tests).
+Only zones in `abmon.yaml` with `dns_check_gonemaster: true` are checked; tests can be excluded per zone with the zone's `exclude` list (either a full `module/test` name or just a module name to exclude all its tests).
 
 Additional command line arguments:
 
 | Argument      | Type    | Default | Required | Description                 |
 | --------      | ----    | ------- | -------- | --------------------------- |
-| --zone    -z  | text    |         |          | Zones to check (repeatable). If not specified, checks all zones with `dns_check_zonemaster: true` |
+| --zone    -z  | text    |         |          | Zones to check (repeatable). If not specified, checks all zones with `dns_check_gonemaster: true` |
 | --exclude -e  | text    | []      |          | Not currently used by the check itself; excludes are read per-zone from `abmon.yaml` instead |
 
-Intended to run periodically via cron, see `examples/check_zonemaster.cron`.
+Intended to run periodically via cron, see `examples/check_gonemaster.cron`.
 
 Example:
 
-    check_zonemaster --zone example.com
+    check_gonemaster --zone example.com
 
 
 ## check_becs_dhcp_scope
@@ -232,10 +232,11 @@ sends the current utilization to icinga as a passive check result.
 Scopes are configured in `abmon.yaml`, under `dhcp_scopes` (see
 `examples/abmon-example.yaml`).
 
-> **Not yet functional:** this check does not vendor a BECS ExtAPI client -
-> the SOAP operation used by the original Python check to fetch DHCP scope
-> utilization is not available in this repository. See `BecsClient` in
-> `cmd/check_becs_dhcp_scope/check_becs_dhcp_scope.go`.
+Talks to BECS over its EAPI (JSON-RPC 2.0), which exposes the same
+methods/fields as the SOAP ExtAPI; requires `becs.url` and `becs.username`
+(and usually `becs.password`) set in `abmon.yaml`. See `BecsClient` in
+`cmd/check_becs_dhcp_scope/check_becs_dhcp_scope.go` and its implementation
+in `becs.go`.
 
 Additional command line arguments:
 
@@ -262,7 +263,7 @@ Writes to `/tmp/factum-zones.conf`, then, if it differs from `/etc/icinga2/conf.
 
 No additional command line arguments.
 
-Intended to run periodically (e.g. via cron), alongside `check_dns_propagation` and `check_zonemaster`, so newly added/removed zones get picked up by Icinga2.
+Intended to run periodically (e.g. via cron), alongside `check_dns_propagation` and `check_gonemaster`, so newly added/removed zones get picked up by Icinga2.
 
 Example:
 
@@ -275,9 +276,5 @@ Use the makefile to compile and install the binaries
 
 make build
 make install
-
-Note: `check_radius_auth` and `check_ntp_peers` do not yet have Makefile build/install targets (see `DEV.md`); build them directly instead, e.g.:
-
-    go build -o build/check_radius_auth ./cmd/check_radius_auth
 
 Alternatively, download a prebuilt release from the [Releases page](https://github.com/abundo/abmon/releases) - each release has a `.tar.gz` per OS/architecture containing all the check binaries. Releases are built by [goreleaser](https://goreleaser.com) (config: `.goreleaser.yaml`); see `DEV.md` for how to cut one.

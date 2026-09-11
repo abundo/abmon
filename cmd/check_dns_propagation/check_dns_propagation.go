@@ -9,26 +9,27 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"os"
 	"strings"
 	"time"
 
+	cmdbase "github.com/abundo/abmon/cmd"
 	abmon "github.com/abundo/abmon/internal"
 	dnsnode "github.com/abundo/dnsnode"
 	"github.com/alecthomas/kong"
 	"github.com/mattn/go-isatty"
 	"github.com/miekg/dns"
-	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 )
 
 type telnetClient struct {
 	debugFlag bool
-	loglevel  logrus.Level
+	loglevel  slog.Level
 }
 
 // Check CLI Options
@@ -104,13 +105,13 @@ func get_ns(zonename string, master string) ([]*dns.NS, error) {
 	m.SetQuestion(dns.Fqdn(zonename), dns.TypeNS)
 	resp, _, err := c.Exchange(m, master+":53")
 	if err != nil {
-		log.Warning("Failed to query SOA:", err)
+		slog.Warn(fmt.Sprint("Failed to query SOA:", err))
 		return nil, err
 	}
 	for _, answer := range resp.Answer {
 		if ns, ok := answer.(*dns.NS); ok {
 			ns_list = append(ns_list, ns)
-			log.Debugf("Found NS %s", ns)
+			slog.Debug(fmt.Sprintf("Found NS %s", ns))
 		}
 	}
 	return ns_list, nil
@@ -138,7 +139,7 @@ func checkZone(event Event) {
 	sites := make(map[string]int)
 
 	zonename := event.Name
-	log.Infof("%s start checkZone", zonename)
+	slog.Info(fmt.Sprintf("%s start checkZone", zonename))
 	event.Type = MessageDone
 
 	zone, ok := config.Zones[zonename]
@@ -150,14 +151,14 @@ func checkZone(event Event) {
 	primary := zone.Primary
 	event.Serial, err = get_soa_serial(event.Name, primary)
 	if err != nil {
-		log.Warning(err)
+		slog.Warn(err.Error())
 		return
 	}
-	log.Infof("%s Got SOA serial %d from %s\n", zonename, event.Serial, primary)
+	slog.Info(fmt.Sprintf("%s Got SOA serial %d from %s\n", zonename, event.Serial, primary))
 
 	ns_list, err := get_ns(zonename, primary)
 	if err != nil {
-		log.Error(err)
+		slog.Error(err.Error())
 		return
 	}
 
@@ -183,8 +184,8 @@ func checkZone(event Event) {
 	var status *dnsnode.ResponseType // .DnsNodeResponse
 	for ix = 1; ix <= 75; ix++ {
 		if debugFlag&DebugCheck > 0 {
-			log.Debugf("%s Checking try %d\n", zonename, ix)
-			log.Debug(abmon.StructToString(output))
+			slog.Debug(fmt.Sprintf("%s Checking try %d\n", zonename, ix))
+			slog.Debug(abmon.StructToString(output))
 		}
 		output = []string{}
 
@@ -268,7 +269,7 @@ func checkZone(event Event) {
 		}
 	}
 	if debugFlag&DebugCheck > 0 {
-		log.Info(abmon.StructToString(output))
+		slog.Info(abmon.StructToString(output))
 	}
 	icingaStatus.Output = strings.Join(output, "\n")
 	if wrongSerial {
@@ -276,7 +277,7 @@ func checkZone(event Event) {
 	}
 
 	abmon.Notify(config, icingaStatus)
-	log.Infof("%s end of checkZone, return code %d\n", zonename, icingaStatus.ReturnCode)
+	slog.Info(fmt.Sprintf("%s end of checkZone, return code %d\n", zonename, icingaStatus.ReturnCode))
 	chanEvent <- event
 }
 
@@ -345,7 +346,7 @@ func CLI(conn net.Conn, client *telnetClient, cmd string) {
 			fmt.Fprintln(conn, "ERROR: unknown command")
 			return
 		}
-		level, ok := dnsnode.Loglevels[args[1]]
+		level, ok := abmon.LogLevels[args[1]]
 		if ok {
 			client.loglevel = level
 			fmt.Fprintf(conn, "Loglevel set to: %s\n", args[1])
@@ -423,12 +424,12 @@ func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 	if r.Opcode == dns.OpcodeNotify {
 		for _, q := range r.Question {
 			name := strings.TrimSuffix(q.Name, ".")
-			log.Infof("Zone: %s Received DNS NOTIFY\n", name)
+			slog.Info(fmt.Sprintf("Zone: %s Received DNS NOTIFY\n", name))
 			zone, ok := config.Zones[name]
 			if ok && zone.DnsCheckPropagation && zone.DnsNode {
 				chanEvent <- Event{Name: name, Type: MessageNew}
 			} else {
-				log.Infof("%s Not an DnsNode zone, ignoring", name)
+				slog.Info(fmt.Sprintf("%s Not an DnsNode zone, ignoring", name))
 			}
 		}
 	}
@@ -445,7 +446,7 @@ func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 // Handle result from checks
 // Handle CLI
 func eventLoop() {
-	log.Debug("Starting Eventloop")
+	slog.Debug("Starting Eventloop")
 	for {
 		event, open := <-chanEvent
 		if !open {
@@ -453,7 +454,7 @@ func eventLoop() {
 			break
 		}
 		if debug {
-			log.Debugf("Eventloop rx message: %+v\n", event)
+			slog.Debug(fmt.Sprintf("Eventloop rx message: %+v\n", event))
 		}
 		switch event.Type {
 
@@ -462,7 +463,7 @@ func eventLoop() {
 			checkProcess, ok := jobs[event.Name]
 			if ok {
 				// abort check? queue check? result can be misleading
-				log.Warningf("%s check is already running\n", event.Name)
+				slog.Warn(fmt.Sprintf("%s check is already running\n", event.Name))
 			} else {
 				_ = checkProcess
 				jobs[event.Name] = &RunningJob{Name: event.Name}
@@ -478,7 +479,7 @@ func eventLoop() {
 				// Remove
 				delete(jobs, event.Name)
 			} else {
-				log.Errorf("INTERNAL ERROR: 'done' from check %s\n", event.Name)
+				slog.Error(fmt.Sprintf("INTERNAL ERROR: 'done' from check %s\n", event.Name))
 			}
 		case MessageCLI:
 			CLI(event.Conn, event.Client, event.Name)
@@ -486,31 +487,43 @@ func eventLoop() {
 				close(event.Done)
 			}
 		default:
-			log.Errorf("Unknown event action: %d", event.Type)
+			slog.Error(fmt.Sprintf("Unknown event action: %d", event.Type))
 		}
 	}
 }
 
-type logToTelnet struct{}
-
-func (hook *logToTelnet) Levels() []logrus.Level {
-	return logrus.AllLevels
+// Wraps another slog.Handler, additionally broadcasting every log record to
+// each connected telnet client (replaces the logrus AddHook mechanism)
+type telnetLogHandler struct {
+	out slog.Handler
 }
 
-// Send log output to stdout and each telnet client
-func (hook *logToTelnet) Fire(entry *logrus.Entry) error {
-	message, err := entry.String()
-	if err != nil {
+func (h *telnetLogHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return level >= abmon.LogLevel.Level()
+}
+
+func (h *telnetLogHandler) Handle(ctx context.Context, r slog.Record) error {
+	if err := h.out.Handle(ctx, r); err != nil {
 		return err
 	}
+
+	message := fmt.Sprintf("%s %s %s\n", r.Time.Format("2006-01-02 15:04:05"), r.Level, r.Message)
 	TelnetClientsMutex.Lock()
 	defer TelnetClientsMutex.Unlock()
 	for conn, client := range TelnetClients {
-		if entry.Level >= client.loglevel {
+		if r.Level >= client.loglevel {
 			conn.Write([]byte(message))
 		}
 	}
 	return nil
+}
+
+func (h *telnetLogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &telnetLogHandler{out: h.out.WithAttrs(attrs)}
+}
+
+func (h *telnetLogHandler) WithGroup(name string) slog.Handler {
+	return &telnetLogHandler{out: h.out.WithGroup(name)}
 }
 
 // connectToTelnetServer is defined in telnet_devclient.go
@@ -518,7 +531,7 @@ func (hook *logToTelnet) Fire(entry *logrus.Entry) error {
 func main() {
 	var err error
 
-	kong.Parse(&opts, kong.Name("check_dns_propagation"), kong.Description("Listen for DNS NOTIFY and measure propagation time"))
+	kong.Parse(&opts, kong.Name("check_dns_propagation"), kong.Description("Listen for DNS NOTIFY and measure propagation time"), kong.Configuration(cmdbase.ConfigLoader))
 
 	check, err = abmon.NewCheck(opts.CheckOpts)
 	if err != nil {
@@ -529,11 +542,17 @@ func main() {
 	// Enable Telnet server
 	go TelnetServer()
 
-	log.AddHook(&logToTelnet{})
-
 	// Only enable local CLI if there is an TTY
-	if isatty.IsTerminal(os.Stdout.Fd()) {
-		log.SetOutput(io.Discard) // avoid duplicate log outputs
+	localConsole := isatty.IsTerminal(os.Stdout.Fd())
+	stdout := io.Writer(os.Stdout)
+	if localConsole {
+		stdout = io.Discard // avoid duplicate log outputs
+	}
+	slog.SetDefault(slog.New(&telnetLogHandler{
+		out: slog.NewTextHandler(stdout, &slog.HandlerOptions{Level: abmon.LogLevel}),
+	}))
+
+	if localConsole {
 		go func() {
 			connectToTelnetServer()
 			// The local dev console disconnected (e.g. Ctrl-D); exit the
@@ -549,10 +568,11 @@ func main() {
 	server := &dns.Server{Addr: ":1053", Net: "udp"}
 	dns.HandleFunc(".", handleDNSRequest)
 
-	log.Info("Starting DNS server on port 1053...")
+	slog.Info("Starting DNS server on port 1053...")
 	err = server.ListenAndServe()
 	defer server.Shutdown()
 	if err != nil {
-		log.Fatalf("Failed to start server: %s\n", err.Error())
+		slog.Error(fmt.Sprintf("Failed to start server: %s\n", err.Error()))
+		os.Exit(1)
 	}
 }

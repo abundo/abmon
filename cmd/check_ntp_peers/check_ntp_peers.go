@@ -17,15 +17,15 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"math"
 	"os"
 	"strconv"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/alecthomas/kong"
 
+	cmdbase "github.com/abundo/abmon/cmd"
 	abmon "github.com/abundo/abmon/internal"
 )
 
@@ -127,7 +127,7 @@ func CheckNTPPeers(check *abmon.MonitoringCheck) error {
 		if len(line) == 0 {
 			continue
 		}
-		log.Debugf("%s", line)
+		slog.Debug(line)
 		if string(line[0]) == "=" {
 			skiplines = false // next row is list of peers
 			continue
@@ -200,7 +200,7 @@ func CheckNTPPeers(check *abmon.MonitoringCheck) error {
 func main() {
 	var err error
 
-	kong.Parse(&opts, kong.Name("check_ntp_peers"), kong.Description("Check status on NTP / Chrony peers"))
+	kong.Parse(&opts, kong.Name("check_ntp_peers"), kong.Description("Check status on NTP / Chrony peers"), kong.Configuration(cmdbase.ConfigLoader))
 
 	// Load configuration
 	check, err := abmon.NewCheck(opts.CheckOpts)
@@ -215,8 +215,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	log.Debugf("MaxOffset %+v", MaxOffset)
-	log.Debugf("MaxJitter %+v", MaxJitter)
+	slog.Debug(fmt.Sprintf("MaxOffset %+v", MaxOffset))
+	slog.Debug(fmt.Sprintf("MaxJitter %+v", MaxJitter))
 	err = CheckNTPPeers(check)
 	//lint:ignore SA4023 CheckNTPPeers only returns without an error when check.Exit has already terminated the process; this guards the remaining case where it returns early with a real error
 	if err != nil {

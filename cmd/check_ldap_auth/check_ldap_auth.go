@@ -60,7 +60,7 @@ func checkLdapAuth(check *abmon.MonitoringCheck) error {
 }
 
 func main() {
-	kong.Parse(&opts, kong.Name("check_ldap_auth"), kong.Description("Check LDAP authentication"))
+	kong.Parse(&opts, kong.Name("check_ldap_auth"), kong.Description("Check LDAP authentication"), kong.Configuration(cmdbase.ConfigLoader))
 	cmdbase.Run(func() error {
 		check, err := abmon.NewCheck(opts.CheckOpts)
 		if err != nil {

@@ -167,7 +167,7 @@ func checkImapMessageAge(check *abmon.MonitoringCheck) error {
 }
 
 func main() {
-	kong.Parse(&opts, kong.Name("check_imap_message_age"), kong.Description("Check the age of the oldest message in an IMAP folder"))
+	kong.Parse(&opts, kong.Name("check_imap_message_age"), kong.Description("Check the age of the oldest message in an IMAP folder"), kong.Configuration(cmdbase.ConfigLoader))
 	cmdbase.Run(func() error {
 		check, err := abmon.NewCheck(opts.CheckOpts)
 		if err != nil {

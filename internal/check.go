@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"math"
 	"net/http"
 	"os"
@@ -17,9 +18,7 @@ import (
 	"strconv"
 	"strings"
 
-	dnsnode "github.com/abundo/dnsnode"
-	log "github.com/sirupsen/logrus"
-
+	"github.com/alecthomas/kong"
 	"gopkg.in/yaml.v2"
 )
 
@@ -30,6 +29,20 @@ import (
 const (
 	DEFAULT_CONFIG_FILE = "/etc/abmon/abmon.yaml"
 )
+
+// LogLevel is the shared, mutable log level used by the default slog
+// handler set up in NewCheck. Other packages (e.g. check_dns_propagation's
+// telnet broadcast handler) reuse it so the --loglevel flag keeps governing
+// what gets logged even when they install their own handler on top.
+var LogLevel = new(slog.LevelVar)
+
+// Map from the --loglevel flag value to a slog.Level
+var LogLevels = map[string]slog.Level{
+	"debug":   slog.LevelDebug,
+	"info":    slog.LevelInfo,
+	"warning": slog.LevelWarn,
+	"error":   slog.LevelError,
+}
 
 // ----- Configuration file -----
 type configTSIG struct {
@@ -43,7 +56,7 @@ type ConfigZone struct {
 	Primary             string            `yaml:"primary"`
 	DnsNode             bool              `yaml:"dnsnode"`
 	DnsCheckPropagation bool              `yaml:"dns_check_propagation"`
-	DnsCheckZonemaster  bool              `yaml:"dns_check_zonemaster"`
+	DnsCheckGonemaster  bool              `yaml:"dns_check_gonemaster"`
 	Exclude             map[string]string `yaml:"exclude"`
 	TSIG                *configTSIG       `yaml:"tsig"`
 }
@@ -220,7 +233,7 @@ func NotifyIcinga(config configIcinga, status IcingaStatus) {
 
 	jsonData, err := json.Marshal(result)
 	if err != nil {
-		log.Error("Error marshaling JSON:", err)
+		slog.Error(fmt.Sprint("Error marshaling JSON:", err))
 		return
 	}
 
@@ -229,7 +242,7 @@ func NotifyIcinga(config configIcinga, status IcingaStatus) {
 	fmt.Printf("jsonData %s\n", jsonData)
 	req, err := http.NewRequest("POST", config.URL, bytes.NewBuffer(jsonData))
 	if err != nil {
-		log.Error("Error creating request:", err)
+		slog.Error(fmt.Sprint("Error creating request:", err))
 		return
 	}
 	req.SetBasicAuth(config.Username, config.Password)
@@ -244,22 +257,22 @@ func NotifyIcinga(config configIcinga, status IcingaStatus) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Error("Error sending request:", err)
+		slog.Error(fmt.Sprint("Error sending request:", err))
 		return
 	}
 	defer resp.Body.Close()
 
 	// Check the response
 	if resp.StatusCode == http.StatusOK {
-		log.Debug("Check result successfully sent")
+		slog.Debug("Check result successfully sent")
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			log.Error("Failed to get response body", err)
+			slog.Error(fmt.Sprint("Failed to get response body", err))
 			return
 		}
 		// if debug {
 		if true {
-			log.Debugf("Body: %s", body)
+			slog.Debug(fmt.Sprintf("Body: %s", body))
 		}
 	} else {
 		body, _ := io.ReadAll(resp.Body)
@@ -341,7 +354,7 @@ func (check *MonitoringCheck) Exit(status int, msg string) {
 // Default CLI options for a check. Embed this anonymously in each check's
 // own Opts struct so kong.Parse sees one flat set of flags.
 type CheckOpts struct {
-	ConfigFile string `help:"Path to configuration file" name:"config" short:"c"`
+	ConfigFile kong.ConfigFlag `help:"Path to configuration file" name:"config" short:"c" default:"/etc/abmon/abmon.yaml"`
 	Debug      bool   `help:"Enable debug logging" short:"d"`
 	Verbose    bool   `help:"Enable verbose output" short:"v"`
 	UnknownAs  string `help:"Nagios/Icinga status to report for UNKNOWN" enum:"ok,warning,critical,unknown" default:"unknown"`
@@ -367,17 +380,13 @@ func NewCheck(opts CheckOpts) (*MonitoringCheck, error) {
 	check.Opts = opts
 
 	// ----- Logging -----
-	myLogFormatter := new(log.TextFormatter)
-	myLogFormatter.TimestampFormat = "2006-01-02 15:04:05"
-	myLogFormatter.FullTimestamp = true
-	log.SetFormatter(myLogFormatter)
-
-	level, ok := dnsnode.Loglevels[check.Opts.Loglevel]
+	level, ok := LogLevels[check.Opts.Loglevel]
 	if !ok {
-		log.Fatalf("Error: unknonwn loglevel %s", check.Opts.Loglevel)
+		return nil, fmt.Errorf("unknown loglevel %s", check.Opts.Loglevel)
 	}
-	log.SetLevel(level)
-	log.Info("Loglevel set to: ", check.Opts.Loglevel)
+	LogLevel.Set(level)
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: LogLevel})))
+	slog.Info(fmt.Sprint("Loglevel set to: ", check.Opts.Loglevel))
 
 	// optionally override return codes
 	check.WARNING = StrToErrstat[check.Opts.WarningAs]
@@ -385,7 +394,7 @@ func NewCheck(opts CheckOpts) (*MonitoringCheck, error) {
 	check.UNKNOWN = StrToErrstat[check.Opts.UnknownAs]
 
 	// Load configuration
-	check.Config, err = LoadConfiguration(check.Opts.ConfigFile)
+	check.Config, err = LoadConfiguration(string(check.Opts.ConfigFile))
 	if err != nil {
 		return nil, err
 	}

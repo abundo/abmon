@@ -88,9 +88,9 @@ builds:
     flags: [-trimpath]
     ldflags: [-s, -w]
 
-  - id: check_zonemaster
-    main: ./cmd/check_zonemaster
-    binary: check_zonemaster
+  - id: check_gonemaster
+    main: ./cmd/check_gonemaster
+    binary: check_gonemaster
     env: [CGO_ENABLED=0]
     goos: [linux, darwin]
     goarch: [amd64, arm64]

@@ -76,7 +76,7 @@ func checkRadiusAuth(check *abmon.MonitoringCheck) error {
 }
 
 func main() {
-	kong.Parse(&opts, kong.Name("check_radius_auth"), kong.Description("Check RADIUS authentication"))
+	kong.Parse(&opts, kong.Name("check_radius_auth"), kong.Description("Check RADIUS authentication"), kong.Configuration(cmdbase.ConfigLoader))
 	cmdbase.Run(func() error {
 		check, err := abmon.NewCheck(opts.CheckOpts)
 		if err != nil {

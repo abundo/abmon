@@ -2,12 +2,10 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"net"
 	"strings"
 	"sync"
-
-	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 )
 
 var TelnetClients = make(map[net.Conn]*telnetClient)
@@ -31,7 +29,7 @@ func HandleTelnetClient(conn net.Conn) {
 		TelnetClientsMutex.Unlock()
 		conn.Close()
 	}()
-	client := &telnetClient{loglevel: logrus.InfoLevel}
+	client := &telnetClient{loglevel: slog.LevelInfo}
 	TelnetClientsMutex.Lock()
 	TelnetClients[conn] = client
 	TelnetClientsMutex.Unlock()
@@ -46,16 +44,16 @@ func HandleTelnetClient(conn net.Conn) {
 		message, err := le.ReadLine()
 		message = strings.TrimSpace(message)
 		if err == errQuit {
-			log.Info("Telnet - client used Ctrl-D to quit")
+			slog.Info("Telnet - client used Ctrl-D to quit")
 			fmt.Fprintln(conn, "Disconnecting, bye!")
 			return
 		}
 		if err != nil {
-			log.Info("Telnet - client disconnected")
+			slog.Info("Telnet - client disconnected")
 			return
 		}
 		if message == "quit" || message == "q" {
-			log.Info("Telnet - client used command quit")
+			slog.Info("Telnet - client used command quit")
 			fmt.Fprintln(conn, "Disconnecting, bye!")
 			return
 		}
@@ -78,19 +76,19 @@ func TelnetServer() {
 	// listener, err := net.Listen("tcp", "127.0.0.1:23")
 	listener, err := net.Listen("tcp", ":10023")
 	if err != nil {
-		log.Error("Telnet - Error starting telnet server:", err)
+		slog.Error(fmt.Sprint("Telnet - Error starting telnet server:", err))
 		return
 	}
 	defer listener.Close()
-	log.Info("Telnet server started on port 10023")
+	slog.Info("Telnet server started on port 10023")
 	for {
 		// Accept a new connection
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Error("Telnet - Error accepting connection:", err)
+			slog.Error(fmt.Sprint("Telnet - Error accepting connection:", err))
 			continue
 		}
-		log.Infof("Telnet - new client connected, %s", conn.RemoteAddr())
+		slog.Info(fmt.Sprintf("Telnet - new client connected, %s", conn.RemoteAddr()))
 		go HandleTelnetClient(conn)
 	}
 }

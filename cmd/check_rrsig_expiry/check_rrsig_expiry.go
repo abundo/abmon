@@ -11,15 +11,15 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
 	"github.com/miekg/dns"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/alecthomas/kong"
 
+	cmdbase "github.com/abundo/abmon/cmd"
 	abmon "github.com/abundo/abmon/internal"
 )
 
@@ -116,12 +116,12 @@ func CheckRRSIGExpiry(check *abmon.MonitoringCheck, zone *abmon.ConfigZone) erro
 }
 
 func main() {
-	kong.Parse(&opts, kong.Name("check_rrsig_expiry"), kong.Description("Check age of RRSIG records in a zone fetched via AXFR"))
+	kong.Parse(&opts, kong.Name("check_rrsig_expiry"), kong.Description("Check age of RRSIG records in a zone fetched via AXFR"), kong.Configuration(cmdbase.ConfigLoader))
 
 	// Load configuration
 	check, err := abmon.NewCheck(opts.CheckOpts)
 	if err != nil {
-		log.Debug(err)
+		slog.Debug(err.Error())
 		os.Exit(abmon.UNKNOWN)
 	}
 	config = check.Config // shortcut
@@ -131,7 +131,7 @@ func main() {
 	}
 	err = CheckRRSIGExpiry(check, zone)
 	if err != nil {
-		log.Error(err)
+		slog.Error(err.Error())
 	}
 }
 

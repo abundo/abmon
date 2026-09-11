@@ -8,13 +8,15 @@ package main
 //
 
 import (
+	"fmt"
+	"log/slog"
 	"os"
 	"sort"
 	"text/template"
 
+	cmdbase "github.com/abundo/abmon/cmd"
 	abmon "github.com/abundo/abmon/internal"
 	"github.com/alecthomas/kong"
-	log "github.com/sirupsen/logrus"
 )
 
 // Todo, move to config file
@@ -56,10 +58,10 @@ object ServiceGroup "DNS-propagation" {
   display_name = "DNS-propagation"
   assign where host.vars.dns_check_propagation
 }
-#object HostGroup "DNS-zonemaster" {
-object ServiceGroup "DNS-zonemaster" {
-  display_name = "DNS-zonemaster"
-  assign where host.vars.dns_check_zonemaster
+#object HostGroup "DNS-gonemaster" {
+object ServiceGroup "DNS-gonemaster" {
+  display_name = "DNS-gonemaster"
+  assign where host.vars.dns_check_gonemaster
 }
 
 apply Service "DNS-propagation" {
@@ -70,9 +72,9 @@ apply Service "DNS-propagation" {
   enable_passive_checks = true
   check_interval = "10800"
 }
-apply Service "DNS-Zonemaster" {
+apply Service "DNS-Gonemaster" {
   import "dns-service"
-  assign where host.vars.dns_check_zonemaster
+  assign where host.vars.dns_check_gonemaster
   check_command = "passive"
   enable_active_checks = false
   enable_passive_checks = true
@@ -88,13 +90,13 @@ object Host "Zone - {{.Name}}" {
   vars.dns_customer = "{{.Customer}}"
   vars.dns_dnsnode = {{.DnsNode}}
   vars.dns_check_propagation = {{.DnsCheckPropagation}}
-  vars.dns_check_zonemaster = {{.DnsCheckZonemaster}}
+  vars.dns_check_gonemaster = {{.DnsCheckGonemaster}}
 }
 `
 
 func main() {
 	var err error
-	kong.Parse(&opts, kong.Name("create_icinga_zones_conf"), kong.Description("Generate the icinga2 config for DNS zone checks"))
+	kong.Parse(&opts, kong.Name("create_icinga_zones_conf"), kong.Description("Generate the icinga2 config for DNS zone checks"), kong.Configuration(cmdbase.ConfigLoader))
 	check, err := abmon.NewCheck(opts.CheckOpts)
 	if err != nil {
 		os.Exit(abmon.UNKNOWN)
@@ -103,7 +105,8 @@ func main() {
 
 	of, err := os.Create(tmp_file)
 	if err != nil {
-		log.Panic("Error creating output file", err)
+		slog.Error(fmt.Sprint("Error creating output file", err))
+		panic(err)
 	}
 	defer of.Close()
 
@@ -128,11 +131,11 @@ func main() {
 			zone := config.Zones[zoneName]
 			tmpl, err := template.New("template").Parse(icingaZoneTemplate)
 			if err != nil {
-				log.Println("Error parsing template:", err)
+				slog.Info(fmt.Sprint("Error parsing template:", err))
 			}
 			err = tmpl.Execute(of, zone)
 			if err != nil {
-				log.Println("Error executing template:", err)
+				slog.Info(fmt.Sprint("Error executing template:", err))
 			}
 		}
 	}
@@ -144,15 +147,15 @@ func main() {
 	}
 
 	if !same {
-		log.Infof("Copying new configuration %s to %s\n", tmp_file, dest_file)
+		slog.Info(fmt.Sprintf("Copying new configuration %s to %s\n", tmp_file, dest_file))
 		err := abmon.CopyFile(tmp_file, dest_file)
 		if err != nil {
-			log.Error("Error copying new configuration file:", err)
+			slog.Error(fmt.Sprint("Error copying new configuration file:", err))
 		} else {
-			log.Info("Reloading icinga2 configuration")
+			slog.Info("Reloading icinga2 configuration")
 			abmon.ReloadIcinga()
 		}
 	} else {
-		log.Info("Configuration unchanged")
+		slog.Info("Configuration unchanged")
 	}
 }
