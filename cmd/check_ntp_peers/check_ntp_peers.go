@@ -75,17 +75,6 @@ type Peer struct {
 
 func ParsePeer(line string) (*Peer, error) {
 	p := new(Peer)
-	// self.tally = None
-	// self.remote = remote
-	// self.refid = None
-	// self.stratum = None
-	// self.t = None
-	// self.when = None
-	// self.poll = None
-	// self.reach = None
-	// self.delay = None
-	// self.offset = None
-	// self.jitter = None
 	line = strings.TrimSpace(line)
 	if line != "" {
 		// Parse the string into the struct

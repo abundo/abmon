@@ -30,14 +30,7 @@ const (
 // Check CLI Options
 type Opts struct {
 	abmon.CheckOpts
-	Zone string `help:"Zone to transfer" short:"z"`
-	// Zonefile string  `help:"read zone from file instead of AXFR"`
-	// No short flag: -c collides with the shared --config-file flag's -c.
-	// (In the original go-flags version, go-flags silently resolved the
-	// collision by binding -c to --critical, meaning -c could never be
-	// used to set --config-file for this one binary. kong instead rejects
-	// the duplicate short flag outright, so -c now unambiguously means
-	// --config-file, matching every other abmon check.)
+	Zone     string  `help:"Zone to transfer" short:"z"`
 	Critical float64 `help:"Minimim age in days on RRSIG before critical" default:"5.0"`
 	Warning  float64 `help:"Minimim age in days on RRSIG before warning" short:"w" default:"8.0"`
 }
@@ -134,68 +127,3 @@ func main() {
 		slog.Error(err.Error())
 	}
 }
-
-/*
-class Check_Rrsig_Expiry(m_util.Plugin_Check):
-
-    def check(self, args):
-        oldest_rrsig_expiration = datetime.timedelta(days=999999)
-        now = datetime.datetime.now().replace(microsecond=0)
-
-        cmd = 'dig'
-        cmd += ' +nottlid'                          # Exclude TTL
-        if self.args.tsig:
-            cmd += " -k %s" % self.args.tsig
-        cmd += " @%s" % self.args.host
-        cmd += " -q %s" % self.args.zone
-        cmd += " -t AXFR"
-        if self.args.zonefile:
-            cmd = 'zcat %s' % self.args.zonefile
-        cmd += ' | grep -i "IN[[:space:]]RRSIG"'    # filter out RRSIG RR
-        cmd += ' | tr "\t" " "'                       # replace all tabs->spaces
-        cmd += ' | tr -s " "'                       # replace repeated spaces with one
-        cmd += ' | m_util. -d " " -f 1,8,9'             # extract name and two date fields
-        if self.args.verbose: print("cmd :", cmd)
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=65536, shell=True)
-        rrsig_count = 0
-        for line in p.stdout:
-            line = line.decode().lower()
-            tmp = line.split()
-            if len(tmp) != 3:
-                print("Unknown RRSIG format in line:", file=sys.stderr)
-                print("  %s" % line, file=sys.stderr)
-                continue
-            rrsig_count += 1
-            try:
-                expiration = datetime.datetime.strptime(tmp[1], RRSIG_DFORMAT)
-                inception = datetime.datetime.strptime(tmp[2], RRSIG_DFORMAT)
-            except ValueError:
-                print("Unknown date format in line:", file=sys.stderr)
-                print("  %s" % line, file=sys.stderr)
-                continue
-
-            len_before_expire = expiration - now
-            if len_before_expire < oldest_rrsig_expiration:
-                oldest_rrsig_expiration = len_before_expire
-                # print("%s | %s" % (tmp[0], oldest_rrsig_expiration), file=sys.stderr)
-            time.sleep(PACING_SLEEP)
-
-        if self.args.verbose: print("Found %i RRSIG records" % rrsig_count)
-        if rrsig_count < 1:
-            abmon.Reply.exit(m_util.CRITICAL, "no signatures found")
-
-        oldest_rrsig_expiration_sec = oldest_rrsig_expiration.days * 86400 + oldest_rrsig_expiration.seconds
-        oldest_rrsig_expiration_days = oldest_rrsig_expiration_sec / 86400
-
-        if oldest_rrsig_expiration_days < 0:
-            abmon.Reply.exit(m_util.CRITICAL, "signatures has expired")
-
-        if oldest_rrsig_expiration_days <= args.critical:
-            abmon.Reply.exit(m_util.CRITICAL, "some signatures will expire in %0.1f days" % oldest_rrsig_expiration_days)
-
-        if oldest_rrsig_expiration_days < args.warning:
-            abmon.Reply.exit(m_util.WARNING, "some signatures will expire in %.1f days" % oldest_rrsig_expiration_days)
-
-        abmon.Reply.exit(m_util.OK, "minimum signature expire in %.1f days\n" % oldest_rrsig_expiration_days)
-
-*/

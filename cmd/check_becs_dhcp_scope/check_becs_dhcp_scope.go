@@ -1,11 +1,11 @@
 //
 // Check free addresses in BECS DHCP scopes
+// This is a passive check, triggered by cron
 //
 // Optionally (re)writes an icinga2 configuration file with one passive
 // service check per scope, and sends the current utilization to icinga
 // as a passive check result.
 //
-// This is a passive check, triggered by cron
 //
 // Author: Anders Lowinger, anders@abundo.se
 //

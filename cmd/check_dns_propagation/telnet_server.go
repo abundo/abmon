@@ -70,7 +70,6 @@ func HandleTelnetClient(conn net.Conn) {
 	}
 }
 
-// Goroutine
 // Listens for telnet clients, and starts a goroutine for each
 func TelnetServer() {
 	// listener, err := net.Listen("tcp", "127.0.0.1:23")

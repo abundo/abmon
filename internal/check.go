@@ -355,12 +355,12 @@ func (check *MonitoringCheck) Exit(status int, msg string) {
 // own Opts struct so kong.Parse sees one flat set of flags.
 type CheckOpts struct {
 	ConfigFile kong.ConfigFlag `help:"Path to configuration file" name:"config" short:"c" default:"/etc/abmon/abmon.yaml"`
-	Debug      bool   `help:"Enable debug logging" short:"d"`
-	Verbose    bool   `help:"Enable verbose output" short:"v"`
-	UnknownAs  string `help:"Nagios/Icinga status to report for UNKNOWN" enum:"ok,warning,critical,unknown" default:"unknown"`
-	WarningAs  string `help:"Nagios/Icinga status to report for WARNING" enum:"ok,warning,critical,unknown" default:"warning"`
-	CriticalAs string `help:"Nagios/Icinga status to report for CRITICAL" enum:"ok,warning,critical,unknown" default:"critical"`
-	Loglevel   string `help:"Set log level" short:"l" enum:"error,warning,info,debug" default:"info"`
+	Debug      bool            `help:"Enable debug logging" short:"d"`
+	Verbose    bool            `help:"Enable verbose output" short:"v"`
+	UnknownAs  string          `help:"Nagios/Icinga status to report for UNKNOWN" enum:"ok,warning,critical,unknown" default:"unknown"`
+	WarningAs  string          `help:"Nagios/Icinga status to report for WARNING" enum:"ok,warning,critical,unknown" default:"warning"`
+	CriticalAs string          `help:"Nagios/Icinga status to report for CRITICAL" enum:"ok,warning,critical,unknown" default:"critical"`
+	Loglevel   string          `help:"Set log level" short:"l" enum:"error,warning,info,debug" default:"info"`
 }
 
 type MonitoringCheck struct {
@@ -469,53 +469,3 @@ func (r *Range) CheckWarnCritical(value float64) int {
 	}
 	return OK
 }
-
-/*
-class Check_Range:
-    """
-    Decode a nagios range specification
-      start < end
-      start and : is not required if start = 0
-      if range is of format "start:" and end is not specified, assume end is infinity
-      to specify negative infinity, use "~"
-      alert is raised if metric is outside start and end range (inclusive of endpoints)
-      todo: if range starts with "@", then alert if inside this range (inclusive of endpoints)
-    """
-
-    def __init__(self, range_):
-        self.range = range_
-
-        tmp = self.range.split(':')
-        if len(tmp) > 2:
-            raise ValueError('Invalid range')
-        if len(tmp) == 2:
-            # we have a range
-            if tmp[0] != '':
-                self.start = float(tmp[0])
-            else:
-                self.start = 0
-            if tmp[1] != '':
-                self.end = float(tmp[1])
-            else:
-                self.end = sys.maxsize
-        else:
-            # only end is specified
-            self.start = 0
-            self.end = float(range)
-
-        if self.start > self.end:
-            raise ValueError('Start must be lower than end')
-
-    def check(self, value):
-        return value < self.start or value > self.end
-
-    def check_warn_crit(self, value):
-        '''
-        Compare a value, handle start as warning and end as critical
-        '''
-        if value > self.end:
-            return CRITICAL
-        if value > self.start:
-            return WARNING
-        return OK
-*/

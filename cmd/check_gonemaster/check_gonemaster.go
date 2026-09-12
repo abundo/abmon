@@ -1,11 +1,9 @@
 //
 // Check a zone for errors using gonemaster
-//
 // This is an passive check, triggered by cron
 //
-//
-// gonemaster is quite slow, so this is implemented purely as a passive
-// check. The result is sent to icinga (REST API) and/or nagios (Command file)
+// This is a passive check.
+// The result is sent to icinga (REST API) and/or nagios (Command file)
 //
 // https://codeberg.org/pawal/gonemaster
 //

@@ -1,6 +1,5 @@
 //
-// Minimal client for the BECS EAPI (JSON-RPC 2.0), covering just what
-// checkBecsDhcpScope needs: sessionLogin, rdrGet and sessionLogout.
+// Client for the BECS EAPI (JSON-RPC 2.0)
 //
 // EAPI exposes the same methods/fields as the SOAP ExtAPI (see becs.wsdl,
 // eapi.html) but wraps them in JSON-RPC 2.0, with the session id passed as
