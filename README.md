@@ -18,7 +18,6 @@ Collection of useful monitoring plugins, for nagios, naemon, icinga, dns and mor
 | [check_rrsig_expiry](#check_rrsig_expiry)     | Checks RRSIG age/expiry in a DNS zone (via AXFR or zone file)                 |
 | [check_gonemaster](#check_gonemaster)       | Checks zone(s) for errors using the gonemaster tool                          |
 | [check_becs_dhcp_scope](#check_becs_dhcp_scope) | Checks free address count in BECS DHCP scopes                                |
-| [create_icinga_zones_conf](#create_icinga_zones_conf) | Not a check - generates Icinga2 config from zones in `abmon.yaml`            |
 
 Command line arguments, valid for all checks:
 
@@ -46,9 +45,11 @@ Zones are read from `abmon.yaml` (see `examples/abmon-example.yaml`); only zones
 
 No additional command line arguments.
 
-The daemon also exposes a small telnet-like console on `localhost:10023` for inspecting/controlling it at runtime (`check <zone>`, `check all`, `debug`/`undebug <all|check|dnsnode>`, `loglevel <level>`, `show clients|jobs|status|zone <name>|zones`, `help`, `quit`). Running the binary from a terminal connects to this console automatically; something needs to be listening on it too (e.g. `telnet localhost 10023`) from another session to drive it interactively.
+The daemon also exposes a small telnet-like console on `localhost:10023` for inspecting/controlling it at runtime (`check <zone>`, `check all`, `debug`/`undebug <all|check|dnsnode>`, `generate icinga-conf`, `loglevel <level>`, `show clients|jobs|status|zone <name>|zones`, `help`, `quit`). Running the binary from a terminal connects to this console automatically; something needs to be listening on it too (e.g. `telnet localhost 10023`) from another session to drive it interactively.
 
 Typically run as a systemd service, see `examples/check_dns_propagation.service`. Something must forward real DNS NOTIFY messages for the zone to this host's port 1053 (e.g. the zone's actual nameserver).
+
+On startup, and whenever `generate icinga-conf` is run on the console, it also generates an Icinga2 configuration file (one `Host` and passive `Service` per DNS zone, grouped by customer) from the zones defined in `abmon.yaml`, and reloads Icinga2 (`systemctl reload icinga2.service`) if the generated file changed. It writes to `/tmp/factum-zones.conf`, then, if it differs from `/etc/icinga2/conf.d/factum-zones.conf`, copies it there and reloads Icinga2. These paths are currently hardcoded.
 
 
 ## check_file_status
@@ -253,21 +254,6 @@ Additional command line arguments:
 Example:
 
     check_becs_dhcp_scope --scope office-lan
-
-
-## create_icinga_zones_conf
-
-Not a check. Generates an Icinga2 configuration file (one `Host` and passive `Service` per DNS zone, grouped by customer) from the zones defined in `abmon.yaml`, and reloads Icinga2 (`systemctl reload icinga2.service`) if the generated file changed.
-
-Writes to `/tmp/factum-zones.conf`, then, if it differs from `/etc/icinga2/conf.d/factum-zones.conf`, copies it there and reloads Icinga2. These paths are currently hardcoded.
-
-No additional command line arguments.
-
-Intended to run periodically (e.g. via cron), alongside `check_dns_propagation` and `check_gonemaster`, so newly added/removed zones get picked up by Icinga2.
-
-Example:
-
-    create_icinga_zones_conf
 
 
 # Installation

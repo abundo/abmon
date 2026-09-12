@@ -35,6 +35,7 @@ type telnetClient struct {
 // Check CLI Options
 type Opts struct {
 	abmon.CheckOpts
+	MaxWorkers int `help:"Maximum number of zone checks running concurrently" default:"100"`
 }
 
 var opts Opts
@@ -42,8 +43,6 @@ var check *abmon.MonitoringCheck
 var config *abmon.ConfigFile
 var debug bool
 
-// var telnetClients = make(map[net.Conn]*telnetClient)
-// var telnetClientsMutex sync.Mutex
 var debugFlag uint32
 
 // Info of running job
@@ -76,8 +75,12 @@ type Event struct {
 	Done   chan struct{} // for MessageCLI, closed once CLI() has finished writing its output
 }
 
-// todo, handle huge amount of events better, limit number of workers?
 var chanEvent = make(chan Event, 500)
+
+// Zone checks to run, consumed by a bounded pool of worker goroutines
+// (started in main) instead of spawning one goroutine per event, so a burst
+// of NOTIFYs can't spin up unbounded concurrent checkZone calls.
+var chanWork = make(chan Event, 500)
 
 // Fetch SOA serial for a zone
 // Returns 0 if error
@@ -281,6 +284,15 @@ func checkZone(event Event) {
 	chanEvent <- event
 }
 
+// Goroutine
+// Runs checkZone for each queued zone; a fixed number of these are started
+// in main, bounding how many checks run concurrently.
+func worker() {
+	for event := range chanWork {
+		checkZone(event)
+	}
+}
+
 func debugFlagsToString() string {
 	var s []string
 	if debugFlag&DebugCheck > 0 {
@@ -300,6 +312,16 @@ func CLI(conn net.Conn, client *telnetClient, cmd string) {
 	}
 	args := strings.Split(cmd, " ")
 	switch args[0] {
+	case "generate":
+		if len(args) == 2 && args[1] == "icinga-conf" {
+			if err := generateIcingaZonesConf(config); err != nil {
+				fmt.Fprintf(conn, "ERROR: %s\n", err)
+			} else {
+				fmt.Fprintln(conn, "Icinga zones configuration generated")
+			}
+		} else {
+			fmt.Fprintln(conn, "ERROR: unknown command, try 'generate icinga-conf'")
+		}
 	case "check":
 		if len(args) == 2 {
 			if args[1] == "all" {
@@ -360,6 +382,7 @@ func CLI(conn net.Conn, client *telnetClient, cmd string) {
 		fmt.Fprintln(conn, "  check all")
 		fmt.Fprintln(conn, "  debug <all|check|dnsnode>")
 		fmt.Fprintln(conn, "  undebug <all|check|dnsnode>")
+		fmt.Fprintln(conn, "  generate icinga-conf")
 		fmt.Fprintln(conn, "  help")
 		fmt.Fprintln(conn, "  loglevel <error|warning|info|debug")
 		fmt.Fprintln(conn, "  show clients")
@@ -468,8 +491,8 @@ func eventLoop() {
 				_ = checkProcess
 				jobs[event.Name] = &RunningJob{Name: event.Name}
 
-				// start new goroutine
-				go checkZone(Event{Name: event.Name})
+				// hand off to the worker pool instead of spawning a goroutine per event
+				chanWork <- Event{Name: event.Name}
 			}
 
 		case MessageDone:
@@ -539,6 +562,10 @@ func main() {
 	}
 	config = check.Config
 
+	if err := generateIcingaZonesConf(config); err != nil {
+		slog.Error(fmt.Sprint("Error generating icinga zones configuration:", err))
+	}
+
 	// Enable Telnet server
 	go TelnetServer()
 
@@ -563,6 +590,14 @@ func main() {
 
 	// Start the eventloop
 	go eventLoop()
+
+	// Start a bounded pool of workers to run zone checks
+	if opts.MaxWorkers < 1 {
+		opts.MaxWorkers = 1
+	}
+	for i := 0; i < opts.MaxWorkers; i++ {
+		go worker()
+	}
 
 	// Create a new DNS server, listening on port 1053
 	server := &dns.Server{Addr: ":1053", Net: "udp"}

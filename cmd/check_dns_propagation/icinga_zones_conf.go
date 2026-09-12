@@ -1,11 +1,10 @@
-package main
+//
+// Generate the icinga2 configuration listing the DNS zones to check.
+// If the generated configuration differs from what is installed, replace it
+// and reload icinga.
+//
 
-//
-// This is NOT a check
-//
-// Create Icinga configuration with DNS zones to check
-// If configuration has changed, reload icinga
-//
+package main
 
 import (
 	"fmt"
@@ -14,26 +13,14 @@ import (
 	"sort"
 	"text/template"
 
-	cmdbase "github.com/abundo/abmon/cmd"
 	abmon "github.com/abundo/abmon/internal"
-	"github.com/alecthomas/kong"
 )
 
 // Todo, move to config file
 const (
-	dest_file = "/etc/icinga2/conf.d/factum-zones.conf"
-	tmp_file  = "/tmp/factum-zones.conf"
+	icingaZonesDestFile = "/etc/icinga2/conf.d/factum-zones.conf"
+	icingaZonesTmpFile  = "/tmp/factum-zones.conf"
 )
-
-// Check CLI Options
-type Opts struct {
-	abmon.CheckOpts
-}
-
-var opts Opts
-var config *abmon.ConfigFile
-
-// ----- Service definition ------
 
 var icingaZoneHeader = `
 # ===========================================================================
@@ -82,7 +69,6 @@ apply Service "DNS-Gonemaster" {
 }
 `
 
-// ----- Service zone definition ------
 var icingaZoneTemplate = `
 object Host "Zone - {{.Name}}" {
   import "dns-host-unmanaged"
@@ -94,19 +80,12 @@ object Host "Zone - {{.Name}}" {
 }
 `
 
-func main() {
-	var err error
-	kong.Parse(&opts, kong.Name("create_icinga_zones_conf"), kong.Description("Generate the icinga2 config for DNS zone checks"), kong.Configuration(cmdbase.ConfigLoader))
-	check, err := abmon.NewCheck(opts.CheckOpts)
+// Generate the icinga2 zones configuration from the loaded config.
+// If it differs from the installed file, replace it and reload icinga.
+func generateIcingaZonesConf(config *abmon.ConfigFile) error {
+	of, err := os.Create(icingaZonesTmpFile)
 	if err != nil {
-		os.Exit(abmon.UNKNOWN)
-	}
-	config = check.Config // shortcut
-
-	of, err := os.Create(tmp_file)
-	if err != nil {
-		slog.Error(fmt.Sprint("Error creating output file", err))
-		panic(err)
+		return fmt.Errorf("error creating output file: %w", err)
 	}
 	defer of.Close()
 
@@ -131,31 +110,32 @@ func main() {
 			zone := config.Zones[zoneName]
 			tmpl, err := template.New("template").Parse(icingaZoneTemplate)
 			if err != nil {
-				slog.Info(fmt.Sprint("Error parsing template:", err))
+				slog.Error(fmt.Sprint("Error parsing icinga zone template:", err))
+				continue
 			}
-			err = tmpl.Execute(of, zone)
-			if err != nil {
-				slog.Info(fmt.Sprint("Error executing template:", err))
+			if err := tmpl.Execute(of, zone); err != nil {
+				slog.Error(fmt.Sprint("Error executing icinga zone template:", err))
 			}
 		}
 	}
 
 	// Is there any changes in configuration?
-	same, err := abmon.FileCmp(tmp_file, dest_file)
+	same, err := abmon.FileCmp(icingaZonesTmpFile, icingaZonesDestFile)
 	if err != nil {
 		same = false
 	}
 
-	if !same {
-		slog.Info(fmt.Sprintf("Copying new configuration %s to %s\n", tmp_file, dest_file))
-		err := abmon.CopyFile(tmp_file, dest_file)
-		if err != nil {
-			slog.Error(fmt.Sprint("Error copying new configuration file:", err))
-		} else {
-			slog.Info("Reloading icinga2 configuration")
-			abmon.ReloadIcinga()
-		}
-	} else {
-		slog.Info("Configuration unchanged")
+	if same {
+		slog.Info("Icinga zones configuration unchanged")
+		return nil
 	}
+
+	slog.Info(fmt.Sprintf("Copying new icinga zones configuration %s to %s\n", icingaZonesTmpFile, icingaZonesDestFile))
+	if err := abmon.CopyFile(icingaZonesTmpFile, icingaZonesDestFile); err != nil {
+		return fmt.Errorf("error copying new icinga zones configuration file: %w", err)
+	}
+
+	slog.Info("Reloading icinga2 configuration")
+	abmon.ReloadIcinga()
+	return nil
 }

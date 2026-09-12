@@ -9,10 +9,10 @@ GO_BUILD_FLAGS := -ldflags="-s -w"
 
 .PHONY: build install \
         check_dns_propagation check_file_status check_http_redirect check_imap_message_age \
-        check_becs_dhcp_scope check_ldap_auth check_gonemaster create_icinga_zones_conf \
+        check_becs_dhcp_scope check_ldap_auth check_gonemaster \
         check_radius_auth check_ntp_peers check_rrsig_expiry
 
-build: check_dns_propagation check_gonemaster create_icinga_zones_conf \
+build: check_dns_propagation check_gonemaster \
        check_file_status check_http_redirect check_imap_message_age check_becs_dhcp_scope check_ldap_auth \
        check_radius_auth check_ntp_peers check_rrsig_expiry
 
@@ -56,14 +56,9 @@ check_gonemaster:
 	@mkdir -p $(BUILD_DIR)
 	@go build $(GO_BUILD_FLAGS) -o $(BUILD_DIR)/check_gonemaster cmd/check_gonemaster/check_gonemaster.go
 
-create_icinga_zones_conf:
-	@mkdir -p $(BUILD_DIR)
-	@go build $(GO_BUILD_FLAGS) -o $(BUILD_DIR)/create_icinga_zones_conf cmd/create_icinga_zones_conf/create_icinga_zones_conf.go
-
 install: build
 	install -m 755 $(BUILD_DIR)/check_dns_propagation    $(INSTALL_DIR)
 	install -m 755 $(BUILD_DIR)/check_gonemaster         $(INSTALL_DIR)
-	install -m 755 $(BUILD_DIR)/create_icinga_zones_conf $(INSTALL_DIR)
 	install -m 755 $(BUILD_DIR)/check_file_status        $(INSTALL_DIR)
 	install -m 755 $(BUILD_DIR)/check_http_redirect      $(INSTALL_DIR)
 	install -m 755 $(BUILD_DIR)/check_imap_message_age   $(INSTALL_DIR)

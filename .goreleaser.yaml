@@ -97,15 +97,6 @@ builds:
     flags: [-trimpath]
     ldflags: [-s, -w]
 
-  - id: create_icinga_zones_conf
-    main: ./cmd/create_icinga_zones_conf
-    binary: create_icinga_zones_conf
-    env: [CGO_ENABLED=0]
-    goos: [linux, darwin]
-    goarch: [amd64, arm64]
-    flags: [-trimpath]
-    ldflags: [-s, -w]
-
 # One archive per os/arch, bundling all check binaries together (mirrors
 # `make install`, which installs them all as a set).
 archives:

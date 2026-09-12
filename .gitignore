@@ -10,7 +10,6 @@ dist/
 
 # binaries built directly into the repo root, e.g. `go build ./cmd/check_x`
 /check_*
-/create_icinga_zones_conf
 
 pkg/
 

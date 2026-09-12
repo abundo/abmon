@@ -1,8 +1,9 @@
 package main
 
-// main() does the actual file writing/reloading, so it's tested indirectly
-// here by exercising the icinga2 config templates it renders, which is
-// where a broken template or field rename would actually bite.
+// generateIcingaZonesConf does the actual file writing/reloading, so it's
+// tested indirectly here by exercising the icinga2 config templates it
+// renders, which is where a broken template or field rename would actually
+// bite.
 
 import (
 	"strings"
