@@ -182,7 +182,7 @@ func main() {
 		slog.Error(err.Error())
 		os.Exit(1)
 	}
-	slog.Debug(fmt.Sprintf("opts: %+v\n", opts))
+	slog.Debug(fmt.Sprintf("opts: %+v", opts))
 	config = check.Config
 	if err := GonemasterCheck(check); err != nil {
 		slog.Error(err.Error())

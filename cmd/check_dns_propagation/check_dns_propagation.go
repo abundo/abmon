@@ -157,7 +157,7 @@ func checkZone(event Event) {
 		slog.Warn(err.Error())
 		return
 	}
-	slog.Info(fmt.Sprintf("%s Got SOA serial %d from %s\n", zonename, event.Serial, primary))
+	slog.Info(fmt.Sprintf("%s Got SOA serial %d from %s", zonename, event.Serial, primary))
 
 	ns_list, err := get_ns(zonename, primary)
 	if err != nil {
@@ -187,7 +187,7 @@ func checkZone(event Event) {
 	var status *dnsnode.ResponseType // .DnsNodeResponse
 	for ix = 1; ix <= 75; ix++ {
 		if debugFlag&DebugCheck > 0 {
-			slog.Debug(fmt.Sprintf("%s Checking try %d\n", zonename, ix))
+			slog.Debug(fmt.Sprintf("%s Checking try %d", zonename, ix))
 			slog.Debug(abmon.StructToString(output))
 		}
 		output = []string{}
@@ -280,7 +280,7 @@ func checkZone(event Event) {
 	}
 
 	abmon.Notify(config, icingaStatus)
-	slog.Info(fmt.Sprintf("%s end of checkZone, return code %d\n", zonename, icingaStatus.ReturnCode))
+	slog.Info(fmt.Sprintf("%s end of checkZone, return code %d", zonename, icingaStatus.ReturnCode))
 	chanEvent <- event
 }
 
@@ -447,7 +447,7 @@ func handleDNSRequest(w dns.ResponseWriter, r *dns.Msg) {
 	if r.Opcode == dns.OpcodeNotify {
 		for _, q := range r.Question {
 			name := strings.TrimSuffix(q.Name, ".")
-			slog.Info(fmt.Sprintf("Zone: %s Received DNS NOTIFY\n", name))
+			slog.Info(fmt.Sprintf("Zone: %s Received DNS NOTIFY", name))
 			zone, ok := config.Zones[name]
 			if ok && zone.DnsCheckPropagation && zone.DnsNode {
 				chanEvent <- Event{Name: name, Type: MessageNew}
@@ -477,7 +477,7 @@ func eventLoop() {
 			break
 		}
 		if debug {
-			slog.Debug(fmt.Sprintf("Eventloop rx message: %+v\n", event))
+			slog.Debug(fmt.Sprintf("Eventloop rx message: %+v", event))
 		}
 		switch event.Type {
 
@@ -486,7 +486,7 @@ func eventLoop() {
 			checkProcess, ok := jobs[event.Name]
 			if ok {
 				// abort check? queue check? result can be misleading
-				slog.Warn(fmt.Sprintf("%s check is already running\n", event.Name))
+				slog.Warn(fmt.Sprintf("%s check is already running", event.Name))
 			} else {
 				_ = checkProcess
 				jobs[event.Name] = &RunningJob{Name: event.Name}
@@ -502,7 +502,7 @@ func eventLoop() {
 				// Remove
 				delete(jobs, event.Name)
 			} else {
-				slog.Error(fmt.Sprintf("INTERNAL ERROR: 'done' from check %s\n", event.Name))
+				slog.Error(fmt.Sprintf("INTERNAL ERROR: 'done' from check %s", event.Name))
 			}
 		case MessageCLI:
 			CLI(event.Conn, event.Client, event.Name)
@@ -607,7 +607,7 @@ func main() {
 	err = server.ListenAndServe()
 	defer server.Shutdown()
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to start server: %s\n", err.Error()))
+		slog.Error(fmt.Sprintf("Failed to start server: %s", err.Error()))
 		os.Exit(1)
 	}
 }

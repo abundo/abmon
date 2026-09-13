@@ -130,7 +130,7 @@ func generateIcingaZonesConf(config *abmon.ConfigFile) error {
 		return nil
 	}
 
-	slog.Info(fmt.Sprintf("Copying new icinga zones configuration %s to %s\n", icingaZonesTmpFile, icingaZonesDestFile))
+	slog.Info(fmt.Sprintf("Copying new icinga zones configuration %s to %s", icingaZonesTmpFile, icingaZonesDestFile))
 	if err := abmon.CopyFile(icingaZonesTmpFile, icingaZonesDestFile); err != nil {
 		return fmt.Errorf("error copying new icinga zones configuration file: %w", err)
 	}
