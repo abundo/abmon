@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/alecthomas/kong"
@@ -23,6 +24,20 @@ import (
 	cmdbase "github.com/abundo/abmon/cmd"
 	abmon "github.com/abundo/abmon/internal"
 )
+
+// icingaConfigTmpl is the icinga2 configuration generated for each DHCP scope
+const icingaConfigTmpl = `{{$host := .IcingaHost}}{{range .Scopes}}apply Service "DHCP Scope {{.Name}}" {
+  import "dhcp-scope-free-addresses"
+  assign where host.name == "{{$host}}"
+}
+
+{{end}}`
+
+// icingaConfigData is the data passed to icingaConfigTmpl
+type icingaConfigData struct {
+	IcingaHost string
+	Scopes     []DHCPScopeUtilization
+}
 
 // Check CLI Options
 type Opts struct {
@@ -57,12 +72,13 @@ type BecsClient interface {
 // passive "DHCP scope free addresses" service per scope, and reloads icinga2
 // if the file changed
 func writeIcingaConfig(filename, icingaHost string, scopes []DHCPScopeUtilization) error {
+	tmpl, err := template.New("icingaConfig").Parse(icingaConfigTmpl)
+	if err != nil {
+		return err
+	}
 	var b strings.Builder
-	for _, s := range scopes {
-		fmt.Fprintf(&b, "apply Service \"DHCP Scope %s\" {\n", s.Name)
-		b.WriteString("  import \"dhcp-scope-free-addresses\"\n")
-		fmt.Fprintf(&b, "  assign where host.name == \"%s\"\n", icingaHost)
-		b.WriteString("}\n\n")
+	if err := tmpl.Execute(&b, icingaConfigData{IcingaHost: icingaHost, Scopes: scopes}); err != nil {
+		return err
 	}
 
 	tmpFile := filename + ".tmp"
