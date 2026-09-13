@@ -354,13 +354,14 @@ func (check *MonitoringCheck) Exit(status int, msg string) {
 // Default CLI options for a check. Embed this anonymously in each check's
 // own Opts struct so kong.Parse sees one flat set of flags.
 type CheckOpts struct {
-	ConfigFile kong.ConfigFlag `help:"Path to configuration file" name:"config" short:"c" default:"/etc/abmon/abmon.yaml"`
-	Debug      bool            `help:"Enable debug logging" short:"d"`
-	Verbose    bool            `help:"Enable verbose output" short:"v"`
-	UnknownAs  string          `help:"Nagios/Icinga status to report for UNKNOWN" enum:"ok,warning,critical,unknown" default:"unknown"`
-	WarningAs  string          `help:"Nagios/Icinga status to report for WARNING" enum:"ok,warning,critical,unknown" default:"warning"`
-	CriticalAs string          `help:"Nagios/Icinga status to report for CRITICAL" enum:"ok,warning,critical,unknown" default:"critical"`
-	Loglevel   string          `help:"Set log level" short:"l" enum:"error,warning,info,debug" default:"info"`
+	Version    kong.VersionFlag `help:"Print version information and quit" short:"V"`
+	ConfigFile kong.ConfigFlag  `help:"Path to configuration file" name:"config" short:"c" default:"/etc/abmon/abmon.yaml"`
+	Debug      bool             `help:"Enable debug logging" short:"d"`
+	Verbose    bool             `help:"Enable verbose output" short:"v"`
+	UnknownAs  string           `help:"Nagios/Icinga status to report for UNKNOWN" enum:"ok,warning,critical,unknown" default:"unknown"`
+	WarningAs  string           `help:"Nagios/Icinga status to report for WARNING" enum:"ok,warning,critical,unknown" default:"warning"`
+	CriticalAs string           `help:"Nagios/Icinga status to report for CRITICAL" enum:"ok,warning,critical,unknown" default:"critical"`
+	Loglevel   string           `help:"Set log level" short:"l" enum:"error,warning,info,debug" default:"info"`
 }
 
 type MonitoringCheck struct {

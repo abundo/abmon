@@ -362,7 +362,7 @@ func CheckNTPPeers(check *abmon.MonitoringCheck) error {
 func main() {
 	var err error
 
-	kong.Parse(&opts, kong.Name("check_ntp_peers"), kong.Description("Check status on NTP / Chrony peers"), kong.Configuration(cmdbase.ConfigLoader))
+	kong.Parse(&opts, kong.Name("check_ntp_peers"), kong.Description("Check status on NTP / Chrony peers"), kong.Configuration(cmdbase.ConfigLoader), kong.Vars{"version": abmon.VersionString()})
 
 	// Load configuration
 	check, err := abmon.NewCheck(opts.CheckOpts)

@@ -4,8 +4,15 @@ BUILD_DIR := build
 # Install directory
 INSTALL_DIR := /opt/abmon
 
+# Release information, embedded into each binary and shown by --version
+VERSION    := $(shell git describe --tags --dirty --always 2>/dev/null || echo dev)
+COMMIT     := $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
+BUILD_DATE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+
+VERSION_PKG := github.com/abundo/abmon/internal
+
 # Go build flags (for release)
-GO_BUILD_FLAGS := -ldflags="-s -w"
+GO_BUILD_FLAGS := -ldflags="-s -w -X $(VERSION_PKG).Version=$(VERSION) -X $(VERSION_PKG).Commit=$(COMMIT) -X $(VERSION_PKG).BuildDate=$(BUILD_DATE)"
 
 .PHONY: build install \
         check_dns_propagation check_file_status check_http_redirect check_imap_message_age \

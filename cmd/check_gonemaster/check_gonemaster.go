@@ -176,7 +176,7 @@ func GonemasterCheck(check *abmon.MonitoringCheck) error {
 }
 
 func main() {
-	kong.Parse(&opts, kong.Name("check_gonemaster"), kong.Description("Check a zone for errors using gonemaster"), kong.Configuration(cmdbase.ConfigLoader))
+	kong.Parse(&opts, kong.Name("check_gonemaster"), kong.Description("Check a zone for errors using gonemaster"), kong.Configuration(cmdbase.ConfigLoader), kong.Vars{"version": abmon.VersionString()})
 	check, err := abmon.NewCheck(opts.CheckOpts)
 	if err != nil {
 		slog.Error(err.Error())

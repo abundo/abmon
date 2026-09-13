@@ -127,7 +127,7 @@ func checkHTTPRedirect(check *abmon.MonitoringCheck) error {
 }
 
 func main() {
-	kong.Parse(&opts, kong.Name("check_http_redirect"), kong.Description("Check that an URL redirects to the expected location"), kong.Configuration(cmdbase.ConfigLoader))
+	kong.Parse(&opts, kong.Name("check_http_redirect"), kong.Description("Check that an URL redirects to the expected location"), kong.Configuration(cmdbase.ConfigLoader), kong.Vars{"version": abmon.VersionString()})
 	cmdbase.Run(func() error {
 		check, err := abmon.NewCheck(opts.CheckOpts)
 		if err != nil {

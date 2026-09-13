@@ -109,7 +109,7 @@ func CheckRRSIGExpiry(check *abmon.MonitoringCheck, zone *abmon.ConfigZone) erro
 }
 
 func main() {
-	kong.Parse(&opts, kong.Name("check_rrsig_expiry"), kong.Description("Check age of RRSIG records in a zone fetched via AXFR"), kong.Configuration(cmdbase.ConfigLoader))
+	kong.Parse(&opts, kong.Name("check_rrsig_expiry"), kong.Description("Check age of RRSIG records in a zone fetched via AXFR"), kong.Configuration(cmdbase.ConfigLoader), kong.Vars{"version": abmon.VersionString()})
 
 	// Load configuration
 	check, err := abmon.NewCheck(opts.CheckOpts)

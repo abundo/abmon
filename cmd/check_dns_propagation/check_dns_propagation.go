@@ -554,7 +554,7 @@ func (h *telnetLogHandler) WithGroup(name string) slog.Handler {
 func main() {
 	var err error
 
-	kong.Parse(&opts, kong.Name("check_dns_propagation"), kong.Description("Listen for DNS NOTIFY and measure propagation time"), kong.Configuration(cmdbase.ConfigLoader))
+	kong.Parse(&opts, kong.Name("check_dns_propagation"), kong.Description("Listen for DNS NOTIFY and measure propagation time"), kong.Configuration(cmdbase.ConfigLoader), kong.Vars{"version": abmon.VersionString()})
 
 	check, err = abmon.NewCheck(opts.CheckOpts)
 	if err != nil {

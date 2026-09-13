@@ -193,7 +193,7 @@ func checkBecsDhcpScope(check *abmon.MonitoringCheck) error {
 }
 
 func main() {
-	kong.Parse(&opts, kong.Name("check_becs_dhcp_scope"), kong.Description("Check free addresses in BECS DHCP scopes"), kong.Configuration(cmdbase.ConfigLoader))
+	kong.Parse(&opts, kong.Name("check_becs_dhcp_scope"), kong.Description("Check free addresses in BECS DHCP scopes"), kong.Configuration(cmdbase.ConfigLoader), kong.Vars{"version": abmon.VersionString()})
 	cmdbase.Run(func() error {
 		check, err := abmon.NewCheck(opts.CheckOpts)
 		if err != nil {
